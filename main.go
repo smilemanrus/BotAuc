@@ -1,6 +1,7 @@
 package main
 
 import (
+	"BotAuc/clients/telegram"
 	"flag"
 	"log"
 )
@@ -10,9 +11,9 @@ const (
 )
 
 func main() {
-	//tgClient := telegram.New(tgHost, mustToken())
+	tgClient := telegram.New(tgHost, mustToken())
 
-	//aucFetcher
+	aucFetcher := fetcher.New(tgClient)
 
 	//processor
 
