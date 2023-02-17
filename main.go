@@ -1,23 +1,32 @@
 package main
 
 import (
-	"BotAuc/clients/telegram"
+	tgClient "BotAuc/clients/telegram"
+	event_consumer "BotAuc/consumer/event-consumer"
+	tgProcessor "BotAuc/events/telegram"
+	"BotAuc/storage/files"
 	"flag"
 	"log"
 )
 
 const (
-	tgHost = "api.telegram.org"
+	tgHost      = "api.telegram.org"
+	storagePath = "storage"
+	bachSize    = 100
 )
 
 func main() {
-	tgClient := telegram.New(tgHost, mustToken())
+	tgClient := tgClient.New(tgHost, mustToken())
+	storage := files.New(storagePath)
 
-	aucFetcher := fetcher.New(tgClient)
+	eventsProcessor := tgProcessor.New(tgClient, storage)
 
-	//processor
+	log.Print("service started")
 
-	//consumer.Start(fetcher, processor)
+	if err := event_consumer.New(eventsProcessor, eventsProcessor, bachSize); err != nil {
+
+	}
+	consumer.Start(fetcher, processor)
 }
 
 func mustToken() string {

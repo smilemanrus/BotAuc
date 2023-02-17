@@ -10,7 +10,7 @@ import (
 type Storage interface {
 	Save(p *Page) error
 	Remove(p *Page) error
-	IsExist(p *Page) (bool, error)
+	IsExists(p *Page) (bool, error)
 }
 
 type Page struct {
