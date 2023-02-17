@@ -22,11 +22,11 @@ func main() {
 	eventsProcessor := tgProcessor.New(tgClient, storage)
 
 	log.Print("service started")
-
-	if err := event_consumer.New(eventsProcessor, eventsProcessor, bachSize); err != nil {
-
+	consumer := event_consumer.New(eventsProcessor, eventsProcessor, bachSize)
+	if err := consumer.Start(); err != nil {
+		log.Fatal()
 	}
-	consumer.Start(fetcher, processor)
+
 }
 
 func mustToken() string {
