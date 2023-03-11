@@ -8,9 +8,8 @@ import (
 )
 
 type Storage interface {
-	Save(p *Page) error
-	Remove(p *Page) error
-	IsExists(p *Page) (bool, error)
+	SaveData(p *Page) error
+	RemoveData(p *Page) error
 }
 
 type Page struct {
