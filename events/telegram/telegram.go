@@ -46,7 +46,7 @@ func (p *Processor) Fetch(limit int) ([]events.Event, error) {
 		res = append(res, event(u))
 	}
 
-	p.offset = updates[len(updates)].ID + 1
+	p.offset = updates[len(updates)-1].ID + 1
 	return res, nil
 }
 

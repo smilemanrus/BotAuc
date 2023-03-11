@@ -18,7 +18,7 @@ type Client struct {
 
 const (
 	getUpdatesMethod  = "getUpdates"
-	sendMessageMethod = "sengMessage"
+	sendMessageMethod = "sendMessage"
 )
 
 func New(host string, token string) *Client {
