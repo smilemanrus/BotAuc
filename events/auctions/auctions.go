@@ -2,6 +2,7 @@ package auctions
 
 import (
 	"BotAuc/events"
+	"BotAuc/storage"
 	"github.com/gocolly/colly/v2"
 	"strings"
 )
@@ -19,6 +20,7 @@ type Auction struct {
 	Name      string
 	StartDate string
 	EndDate   string
+	Id        string //TODO Настроить заполнение ID по ссылке на аукцион
 }
 
 func NewAuc(name, startDate, endDate string) Auction {
@@ -34,7 +36,7 @@ type Meta struct {
 	EndDate   string
 }
 
-func New() *Processor {
+func New(storage storage.Storage) *Processor {
 	return &Processor{}
 }
 
