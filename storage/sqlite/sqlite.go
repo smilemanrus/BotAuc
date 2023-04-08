@@ -5,6 +5,7 @@ import (
 	"BotAuc/storage"
 	"context"
 	"database/sql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Storage struct {
@@ -23,17 +24,28 @@ func New(path string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) SaveData(ctx context.Context, p *storage.Auc) error {
-	q := `INSERT INTO aucs (Id, Name, URL, StartDate, EndDate) VALUES (?, ?, ?, ?, ?)`
+func (s *Storage) SaveData(ctx context.Context, auc *storage.Auction) error {
+	q := `INSERT INTO aucs (Name, URL, StartDate, EndDate) VALUES (?, ?, ?, ?, ?)`
 
-	if _, err := s.db.ExecContext(ctx, q, p.Id, p.AucName, p.URL, p.StartDate, p.EndDate); err != nil {
+	if _, err := s.db.ExecContext(ctx, q, auc.Name, auc.URL, auc.StartDate, auc.EndDate); err != nil {
 		return e.Wrap("can't save auc", err)
 	}
 	return nil
 }
 
-func (s *Storage) RemoveData(ctx context.Context, p *storage.Auc) error {
+func (s *Storage) RemoveData(ctx context.Context, auc *storage.Auction) error {
 	return nil
+}
+
+func (s *Storage) IsExists(ctx context.Context, auc *storage.Auction) (bool, error) {
+	q := `SELECT COUNT(*) FROM aucs WHERE URL = ?`
+
+	var count int
+	if err := s.db.QueryRowContext(ctx, q, auc.URL).Scan(&count); err != nil {
+		return false, e.Wrap("can't check auc", err)
+	}
+
+	return count > 0, nil
 }
 
 func (s *Storage) Init(ctx context.Context) error {

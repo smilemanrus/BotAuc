@@ -10,7 +10,7 @@ import (
 
 const (
 	tgHost      = "api.telegram.org"
-	storagePath = "data/sqlite"
+	storagePath = "data/sqlite/storage.db"
 	bachSize    = 100
 )
 
@@ -29,7 +29,7 @@ func main() {
 	//	log.Fatal()
 	//}
 
-	//Парсер
+	//Парсер1
 	storage, err := sqlite.New(storagePath)
 	if err != nil {
 		log.Fatalf("can't run db: %s", err)

@@ -22,7 +22,6 @@ type Meta struct {
 
 var (
 	ErrUnknownEventType = errors.New("unknown event type")
-	ErrUnknownMetaType  = errors.New("unknown meta type")
 )
 
 func New(client *telegram.Client, storage storage.Storage) *Processor {
@@ -103,7 +102,7 @@ func (p *Processor) processMessage(event events.Event) error {
 func meta(event events.Event) (Meta, error) {
 	res, ok := event.Meta.(Meta)
 	if !ok {
-		return Meta{}, e.Wrap("can't get meta", ErrUnknownMetaType)
+		return Meta{}, e.Wrap("can't get meta", events.ErrUnknownMetaType())
 	}
 	return res, nil
 }

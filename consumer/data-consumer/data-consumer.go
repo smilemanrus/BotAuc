@@ -19,7 +19,7 @@ func New(fetcher events.Fetcher, processor events.Processor, bathSize int) Consu
 		bathSize:  bathSize,
 	}
 }
-func (c Consumer) Start(cww string) error {
+func (c Consumer) Start() error {
 	for {
 		gotAucs, err := c.fetcher.Fetch(c.bathSize)
 		if err != nil {

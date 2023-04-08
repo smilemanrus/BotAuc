@@ -1,5 +1,7 @@
 package events
 
+import "errors"
+
 type Fetcher interface {
 	Fetch(limit int) ([]Event, error)
 }
@@ -20,4 +22,8 @@ type Event struct {
 	Type Type
 	Text string
 	Meta interface{}
+}
+
+func ErrUnknownMetaType() error {
+	return errors.New("unknown meta type")
 }
