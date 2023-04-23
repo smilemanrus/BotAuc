@@ -5,12 +5,14 @@ import (
 	"BotAuc/lib/e"
 	"BotAuc/storage"
 	"context"
+	"fmt"
 	"github.com/gocolly/colly/v2"
+	"path"
 	"strings"
 )
 
 const (
-	url = "https://auctions.partner.ru/auction/ready"
+	domain = "auctions.partner.ru"
 )
 
 type Processor struct {
@@ -24,11 +26,12 @@ type Auction struct {
 	URL       string
 }
 
-func NewAuc(name, startDate, endDate string) Auction {
+func NewAuc(name, startDate, endDate, url string) Auction {
 	return Auction{
 		Name:      strings.TrimSpace(name),
 		StartDate: strings.TrimSpace(startDate),
 		EndDate:   strings.TrimSpace(endDate),
+		URL:       strings.TrimSpace(url),
 	}
 }
 
@@ -50,15 +53,21 @@ func (p *Processor) Fetch(limit int) ([]events.Event, error) {
 	c := colly.NewCollector()
 
 	c.OnHTML("div.panel.panel-default.table-responsive tbody>tr ", func(e *colly.HTMLElement) {
+
+		href, _ := e.DOM.Find("td:nth-child(1)>a").Attr("href")
+		href = path.Join(domain, href)
+
 		auc := NewAuc(
 			e.DOM.Find("td:nth-child(1)").Text(),
 			e.DOM.Find("td:nth-child(3)").Text(),
-			e.DOM.Find("td:nth-child(4)").Text())
+			e.DOM.Find("td:nth-child(4)").Text(),
+			fmt.Sprintf("%s%s", "https://", href))
 		aucEvent := aucToEvent(auc)
 		aucs = append(aucs, aucEvent)
 	})
 
-	err := c.Visit(url)
+	url := path.Join(domain, "auction/ready")
+	err := c.Visit(fmt.Sprintf("%s%s", "https://", url))
 
 	return aucs, err
 }

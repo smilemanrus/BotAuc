@@ -25,7 +25,7 @@ func New(path string) (*Storage, error) {
 }
 
 func (s *Storage) SaveData(ctx context.Context, auc *storage.Auction) error {
-	q := `INSERT INTO aucs (Name, URL, StartDate, EndDate) VALUES (?, ?, ?, ?, ?)`
+	q := `INSERT INTO aucs (Name, URL, StartDate, EndDate) VALUES (?, ?, ?, ?)`
 
 	if _, err := s.db.ExecContext(ctx, q, auc.Name, auc.URL, auc.StartDate, auc.EndDate); err != nil {
 		return e.Wrap("can't save auc", err)
