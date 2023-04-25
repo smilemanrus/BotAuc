@@ -9,6 +9,7 @@ type Auction struct {
 	StartDate string
 	EndDate   string
 	URL       string
+	Status    string
 }
 
 type Storage interface {

@@ -7,12 +7,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/gocolly/colly/v2"
+	"log"
 	"path"
 	"strings"
 )
 
 const (
-	domain = "auctions.partner.ru"
+	domain    = "auctions.partner.ru"
+	aucReady  = "ready"
+	aucActive = "active"
 )
 
 type Processor struct {
@@ -39,6 +42,7 @@ type Meta struct {
 	StartDate string
 	EndDate   string
 	URL       string
+	Status    string
 }
 
 func New(storage storage.Storage) *Processor {
@@ -48,31 +52,17 @@ func New(storage storage.Storage) *Processor {
 }
 
 func (p *Processor) Fetch(limit int) ([]events.Event, error) {
-
 	aucs := make([]events.Event, 0)
-	c := colly.NewCollector()
-
-	c.OnHTML("div.panel.panel-default.table-responsive tbody>tr ", func(e *colly.HTMLElement) {
-
-		href, _ := e.DOM.Find("td:nth-child(1)>a").Attr("href")
-		href = path.Join(domain, href)
-
-		auc := NewAuc(
-			e.DOM.Find("td:nth-child(1)").Text(),
-			e.DOM.Find("td:nth-child(3)").Text(),
-			e.DOM.Find("td:nth-child(4)").Text(),
-			fmt.Sprintf("%s%s", "https://", href))
-		aucEvent := aucToEvent(auc)
-		aucs = append(aucs, aucEvent)
-	})
-
-	url := path.Join(domain, "auction/ready")
-	err := c.Visit(fmt.Sprintf("%s%s", "https://", url))
+	errLog := "can't parse auc, status %s"
+	err := aucDataByStatus(&aucs, aucReady)
+	err = e.WrapIfErr(fmt.Sprintf(errLog, aucReady), err)
+	err = aucDataByStatus(&aucs, aucActive)
+	err = e.WrapIfErr(fmt.Sprintf(errLog, aucActive), err)
 
 	return aucs, err
 }
 
-func aucToEvent(auc Auction) events.Event {
+func aucToEvent(auc Auction, status string) events.Event {
 	res := events.Event{
 		Type: events.Auction,
 		Text: auc.Name,
@@ -81,6 +71,7 @@ func aucToEvent(auc Auction) events.Event {
 		StartDate: auc.StartDate,
 		EndDate:   auc.EndDate,
 		URL:       auc.URL,
+		Status:    status,
 	}
 	return res
 }
@@ -95,10 +86,29 @@ func eventToAuc(event events.Event) (storage.Auction, error) {
 		StartDate: meta.StartDate,
 		EndDate:   meta.EndDate,
 		URL:       meta.URL,
+		Status:    meta.Status,
 	}
 	return auc, nil
 }
-func (p *Processor) Process(event events.Event) error {
+func (p *Processor) Process(events []events.Event) error {
+	var err error
+	var actURL string
+	actualURLS := make([]string, 0)
+	for _, event := range events {
+		log.Printf("got new event: %s", event.Text)
+		actURL, err = p.SaveEvent(event)
+		if err != nil {
+			continue
+		}
+		actualURLS = append(actualURLS, actURL)
+	}
+
+	err = actualizeAucs(actualURLS)
+
+	return err
+}
+
+func (p *Processor) SaveEvent(event events.Event) (string, error) {
 	errMsg := "can't process event"
 	auc, err := eventToAuc(event)
 	err = e.WrapIfErr(errMsg, err)
@@ -110,7 +120,7 @@ func (p *Processor) Process(event events.Event) error {
 		err = p.storage.SaveData(context.Background(), &auc)
 		err = e.WrapIfErr(errMsg, err)
 	}
-	return err
+	return auc.URL, err
 }
 
 func meta(event events.Event) (Meta, error) {
@@ -119,4 +129,32 @@ func meta(event events.Event) (Meta, error) {
 		return Meta{}, e.Wrap("can't get meta", events.ErrUnknownMetaType())
 	}
 	return res, nil
+}
+
+func aucDataByStatus(aucs *[]events.Event, status string) error {
+
+	c := colly.NewCollector()
+	c.OnHTML("div.panel.panel-default.table-responsive tbody>tr ", func(e *colly.HTMLElement) {
+
+		href, _ := e.DOM.Find("td:nth-child(1)>a").Attr("href")
+		href = path.Join(domain, href)
+
+		auc := NewAuc(
+			e.DOM.Find("td:nth-child(1)").Text(),
+			e.DOM.Find("td:nth-child(3)").Text(),
+			e.DOM.Find("td:nth-child(4)").Text(),
+			fmt.Sprintf("%s%s", "https://", href))
+		aucEvent := aucToEvent(auc, status)
+		*aucs = append(*aucs, aucEvent)
+	})
+
+	url := path.Join(domain, "auction", status)
+	err := c.Visit(fmt.Sprintf("%s%s", "https://", url))
+	return err
+}
+
+func actualizeAucs(actualURLS []string) error {
+	var err error
+
+	return err
 }

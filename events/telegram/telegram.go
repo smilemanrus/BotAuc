@@ -49,6 +49,15 @@ func (p *Processor) Fetch(limit int) ([]events.Event, error) {
 	return res, nil
 }
 
+func (p *Processor) Process(event events.Event) error {
+	switch event.Type {
+	case events.Message:
+		return p.processMessage(event)
+	default:
+		return e.Wrap("Can't process message", ErrUnknownEventType)
+	}
+}
+
 func event(upd telegram.Update) events.Event {
 	updType := fetchType(upd)
 	res := events.Event{
@@ -77,15 +86,6 @@ func fetchType(upd telegram.Update) events.Type {
 		return events.Unknown
 	}
 	return events.Message
-}
-
-func (p *Processor) Process(event events.Event) error {
-	switch event.Type {
-	case events.Message:
-		return p.processMessage(event)
-	default:
-		return e.Wrap("Can't process message", ErrUnknownEventType)
-	}
 }
 
 func (p *Processor) processMessage(event events.Event) error {

@@ -25,9 +25,9 @@ func New(path string) (*Storage, error) {
 }
 
 func (s *Storage) SaveData(ctx context.Context, auc *storage.Auction) error {
-	q := `INSERT INTO aucs (Name, URL, StartDate, EndDate) VALUES (?, ?, ?, ?)`
+	q := `INSERT INTO aucs (Name, URL, StartDate, EndDate, Status) VALUES (?, ?, ?, ?, ?)`
 
-	if _, err := s.db.ExecContext(ctx, q, auc.Name, auc.URL, auc.StartDate, auc.EndDate); err != nil {
+	if _, err := s.db.ExecContext(ctx, q, auc.Name, auc.URL, auc.StartDate, auc.EndDate, auc.Status); err != nil {
 		return e.Wrap("can't save auc", err)
 	}
 	return nil
@@ -49,7 +49,7 @@ func (s *Storage) IsExists(ctx context.Context, auc *storage.Auction) (bool, err
 }
 
 func (s *Storage) Init(ctx context.Context) error {
-	q := `CREATE TABLE IF NOT EXISTS aucs (Id TEXT, Name TEXT, URL TEXT, StartDate DATETIME, EndDate DATETIME)`
+	q := `CREATE TABLE IF NOT EXISTS aucs (Name TEXT, URL TEXT, StartDate DATETIME, EndDate DATETIME, Status TEXT)`
 	if _, err := s.db.ExecContext(ctx, q); err != nil {
 		err = e.Wrap("can't create table auc", err)
 		return err
