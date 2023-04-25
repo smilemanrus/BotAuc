@@ -9,7 +9,6 @@ const (
 	AucCmd   = "/auc"
 	HelpCmd  = "/help"
 	StartCmd = "/start"
-	FwdCmd   = "/fwd" //добавить проверку на админа
 )
 
 func (p *Processor) doCMD(text string, chatID int, username string) error {
@@ -23,8 +22,6 @@ func (p *Processor) doCMD(text string, chatID int, username string) error {
 		return p.sendHelp(chatID)
 	case StartCmd:
 		return p.sendStart(chatID)
-	case FwdCmd:
-		return p.sendNoFunc(chatID)
 	default:
 		return p.tg.SendMessage(chatID, msgUnknownCmd)
 	}

@@ -7,16 +7,18 @@ import (
 )
 
 type Consumer struct {
-	fetcher   events.Fetcher
-	processor events.Processor
-	bathSize  int
+	fetcher    events.Fetcher
+	processor  events.Processor
+	bathSize   int
+	pauseValue time.Duration
 }
 
-func New(fetcher events.Fetcher, processor events.Processor, bathSize int) Consumer {
+func New(fetcher events.Fetcher, processor events.Processor, bathSize int, pauseValue time.Duration) Consumer {
 	return Consumer{
-		fetcher:   fetcher,
-		processor: processor,
-		bathSize:  bathSize,
+		fetcher:    fetcher,
+		processor:  processor,
+		bathSize:   bathSize,
+		pauseValue: pauseValue,
 	}
 }
 
@@ -28,7 +30,7 @@ func (c Consumer) Start() error {
 			continue
 		}
 		if len(gotEvents) == 0 {
-			time.Sleep(1 * time.Second)
+			time.Sleep(c.pauseValue * time.Second)
 			continue
 		}
 		if err := c.HandleEvents(gotEvents); err != nil {
@@ -39,12 +41,8 @@ func (c Consumer) Start() error {
 }
 
 func (c Consumer) HandleEvents(events []events.Event) error {
-	for _, event := range events {
-		log.Printf("got new event: %s", event.Text)
-		if err := c.processor.Process(event); err != nil {
-			log.Printf("can't handle event: %s", err.Error())
-			continue
-		}
+	if err := c.processor.Process(events); err != nil {
+		log.Printf("can't handle event: %s", err.Error())
 	}
 	return nil
 }
