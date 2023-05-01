@@ -5,7 +5,9 @@ import (
 	"BotAuc/storage"
 	"context"
 	"database/sql"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"strings"
 )
 
 type Storage struct {
@@ -25,9 +27,10 @@ func New(path string) (*Storage, error) {
 }
 
 func (s *Storage) SaveData(ctx context.Context, auc *storage.Auction) error {
-	q := `INSERT INTO aucs (Name, URL, StartDate, EndDate, Status) VALUES (?, ?, ?, ?, ?)`
+	q := `DELETE FROM aucs WHERE URL = ?;
+			INSERT INTO aucs (Name, URL, StartDate, EndDate, Status) VALUES (?, ?, ?, ?, ?)`
 
-	if _, err := s.db.ExecContext(ctx, q, auc.Name, auc.URL, auc.StartDate, auc.EndDate, auc.Status); err != nil {
+	if _, err := s.db.ExecContext(ctx, q, auc.URL, auc.Name, auc.URL, auc.StartDate, auc.EndDate, auc.Status); err != nil {
 		return e.Wrap("can't save auc", err)
 	}
 	return nil
@@ -55,4 +58,24 @@ func (s *Storage) Init(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Storage) ActualizeAucs(ctx context.Context, urls *storage.UrlsAlias) error {
+	q := `DELETE FROM aucs WHERE NOT URL IN (%s)`
+	q = fmt.Sprintf(q, listOfURLParams(urls))
+
+	params := make([]interface{}, 0)
+	for _, url := range *urls {
+		params = append(params, url)
+	}
+
+	if _, err := s.db.ExecContext(ctx, q, params...); err != nil {
+		return e.Wrap("can't save auc", err)
+	}
+	return nil
+}
+
+func listOfURLParams(urls *storage.UrlsAlias) string {
+	res := strings.Repeat("?, ", len(*urls)-1) + "?"
+	return res
 }
