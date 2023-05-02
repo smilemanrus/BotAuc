@@ -16,7 +16,7 @@ type UrlsAlias []string
 
 type Storage interface {
 	SaveData(ctx context.Context, p *Auction) error
-	RemoveData(ctx context.Context, p *Auction) error
 	IsExists(ctx context.Context, p *Auction) (bool, error)
 	ActualizeAucs(ctx context.Context, urls *UrlsAlias) error
+	GetFutureAucs(ctx context.Context) (string, error)
 }

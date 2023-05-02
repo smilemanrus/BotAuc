@@ -36,10 +36,6 @@ func (s *Storage) SaveData(ctx context.Context, auc *storage.Auction) error {
 	return nil
 }
 
-func (s *Storage) RemoveData(ctx context.Context, auc *storage.Auction) error {
-	return nil
-}
-
 func (s *Storage) IsExists(ctx context.Context, auc *storage.Auction) (bool, error) {
 	q := `SELECT COUNT(*) FROM aucs WHERE URL = ?`
 
@@ -73,6 +69,10 @@ func (s *Storage) ActualizeAucs(ctx context.Context, urls *storage.UrlsAlias) er
 		return e.Wrap("can't save auc", err)
 	}
 	return nil
+}
+
+func (s *Storage) GetFutureAucs(ctx context.Context) (string, error) {
+	return "", nil
 }
 
 func listOfURLParams(urls *storage.UrlsAlias) string {
