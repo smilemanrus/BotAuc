@@ -93,7 +93,7 @@ func eventToAuc(event events.Event) (storage.Auction, error) {
 func (p *Processor) Process(events []events.Event) error {
 	var err error
 	var actURL string
-	actualURLS := make([]string, 0)
+	actualURLS := make(storage.UrlsAlias, 0)
 	for _, event := range events {
 		log.Printf("got new event: %s", event.Text)
 		actURL, err = p.SaveEvent(event)
@@ -103,7 +103,9 @@ func (p *Processor) Process(events []events.Event) error {
 		actualURLS = append(actualURLS, actURL)
 	}
 
-	err = actualizeAucs(actualURLS)
+	if err = p.actualizeAucs(&actualURLS); err != nil {
+		err = e.Wrap("can't process auc actualising", err)
+	}
 
 	return err
 }
@@ -153,8 +155,8 @@ func aucDataByStatus(aucs *[]events.Event, status string) error {
 	return err
 }
 
-func actualizeAucs(actualURLS []string) error {
-	var err error
-
+func (p *Processor) actualizeAucs(actualURLS *storage.UrlsAlias) error {
+	err := p.storage.ActualizeAucs(context.Background(), actualURLS)
+	err = e.WrapIfErr("can't actualise aucs", err)
 	return err
 }

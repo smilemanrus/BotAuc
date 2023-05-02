@@ -1,6 +1,8 @@
 package telegram
 
 import (
+	"BotAuc/lib/e"
+	"context"
 	"log"
 	"strings"
 )
@@ -37,4 +39,13 @@ func (p *Processor) sendHelp(chatID int) error {
 
 func (p *Processor) sendStart(chatID int) error {
 	return p.tg.SendMessage(chatID, msgStart)
+}
+
+func (p *Processor) sendAucData(chatID int) error {
+	aucInfo, err := p.storage.GetFutureAucs(context.Background())
+	if err == nil {
+		err = e.Wrap("can't get auc info", err)
+		return err
+	}
+	return p.tg.SendMessage(chatID, aucInfo)
 }
