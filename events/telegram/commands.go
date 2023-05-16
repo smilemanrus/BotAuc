@@ -19,7 +19,7 @@ func (p *Processor) doCMD(text string, chatID int, username string) error {
 	log.Printf("got new command '%s' from '%s'", text, username)
 	switch text {
 	case AucCmd:
-		return p.sendNoFunc(chatID)
+		return p.sendAucData(chatID)
 	case HelpCmd:
 		return p.sendHelp(chatID)
 	case StartCmd:
@@ -42,10 +42,11 @@ func (p *Processor) sendStart(chatID int) error {
 }
 
 func (p *Processor) sendAucData(chatID int) error {
-	aucInfo, err := p.storage.GetFutureAucs(context.Background())
-	if err == nil {
+	msg := ""
+	err := p.storage.GetFutureAucs(context.Background(), &msg)
+	if err != nil {
 		err = e.Wrap("can't get auc info", err)
 		return err
 	}
-	return p.tg.SendMessage(chatID, aucInfo)
+	return p.tg.SendMessage(chatID, msg)
 }
