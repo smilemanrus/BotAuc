@@ -71,8 +71,35 @@ func (s *Storage) ActualizeAucs(ctx context.Context, urls *storage.UrlsAlias) er
 	return nil
 }
 
-func (s *Storage) GetFutureAucs(ctx context.Context) (string, error) {
-	return "", nil
+func (s *Storage) GetFutureAucs(ctx context.Context, msg *string) (err error) {
+	q := `select Name,
+				   URL,
+				   CAST(StartDate AS VARCHAR),
+				   CAST(EndDate AS VARCHAR)
+			from aucs
+			WHERE Status = 'ready'`
+
+	row, err := s.db.QueryContext(ctx, q)
+	if err != nil {
+		err = e.Wrap("can't make request", err)
+	}
+	defer func() { _ = row.Close() }()
+
+	aucs := make([]string, 0)
+	for row.Next() { // Iterate and fetch the records from result cursor
+		var name string
+		var url string
+		var startDate string
+		var endDate string
+		if err = row.Scan(&name, &url, &startDate, &endDate); err != nil {
+			err = e.Wrap("can't scan row", err)
+			return err
+		}
+
+		aucs = append(aucs, fmt.Sprintf(`[%s](%s) с %s по %s`, name, url, startDate, endDate))
+	}
+	*msg = strings.Join(aucs, `\n`)
+	return err
 }
 
 func listOfURLParams(urls *storage.UrlsAlias) string {
