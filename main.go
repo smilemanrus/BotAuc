@@ -6,6 +6,7 @@ import (
 	"BotAuc/events/auctions"
 	tgProcessor "BotAuc/events/telegram"
 	"BotAuc/initiation"
+	"BotAuc/notification"
 	"BotAuc/storage/sqlite"
 	"context"
 	"log"
@@ -18,13 +19,17 @@ const (
 )
 
 func main() {
-	//Бот
-	InitParams := initiation.InitiateParams()
 
+	InitParams := initiation.InitiateParams()
 	storage, err := sqlite.New(storagePath)
 	if err != nil {
 		log.Fatalf("can't run db: %s", err)
 	}
+	if err = storage.Init(context.Background()); err != nil {
+		log.Fatalf("can't init db: %s", err)
+	}
+
+	//Бот
 	tgClient := telegramClient.New(tgHost, InitParams.Token)
 	eventsProcessor := tgProcessor.New(tgClient, storage)
 
@@ -35,12 +40,16 @@ func main() {
 	}
 
 	//Парсер
-	if err = storage.Init(context.Background()); err != nil {
-		log.Fatalf("can't init db: %s", err)
-	}
 	aucProcessor := auctions.New(storage)
 	aucConsumer := eventConsumer.New(aucProcessor, aucProcessor, 0, 100)
 	if err := aucConsumer.Start(); err != nil {
 		log.Fatal()
 	}
+
+	//Оповещения
+	notyProcessor := notification.New(storage)
+	if err := notyProcessor.Process(notification.HourBeforeAuc); err != nil {
+		log.Fatal()
+	}
+
 }

@@ -19,4 +19,6 @@ type Storage interface {
 	IsExists(ctx context.Context, p *Auction) (bool, error)
 	ActualizeAucs(ctx context.Context, urls *UrlsAlias) error
 	GetFutureAucs(ctx context.Context, msg *string) error
+	SubscrToAucs(ctx context.Context, chatID int, username string) error
+	UnSubscrFormAucs(ctx context.Context, chatID int, username string) error
 }

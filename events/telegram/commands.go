@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	AucCmd   = "/auc"
-	HelpCmd  = "/help"
-	StartCmd = "/start"
+	AucCmd      = "/auc"
+	HelpCmd     = "/help"
+	StartCmd    = "/start"
+	SubscrCmd   = "/subscr"
+	UnSubscrCmd = "/unsubscr"
 )
 
 func (p *Processor) doCMD(text string, chatID int, username string) error {
@@ -24,6 +26,10 @@ func (p *Processor) doCMD(text string, chatID int, username string) error {
 		return p.sendHelp(chatID)
 	case StartCmd:
 		return p.sendStart(chatID)
+	case SubscrCmd:
+		return p.subscrToAucs(chatID, username)
+	case UnSubscrCmd:
+		return p.sendNoFunc(chatID)
 	default:
 		return p.tg.SendMessage(chatID, msgUnknownCmd)
 	}
@@ -49,4 +55,22 @@ func (p *Processor) sendAucData(chatID int) error {
 		return err
 	}
 	return p.tg.SendMessage(chatID, msg)
+}
+
+func (p *Processor) subscrToAucs(chatID int, username string) error {
+	err := p.storage.SubscrToAucs(context.Background(), chatID, username)
+	if err != nil {
+		err = e.Wrap("can't subscribe to auc", err)
+		return err
+	}
+	return p.tg.SendMessage(chatID, msgSubscrAuc)
+}
+
+func (p *Processor) unSubscrFormAucs(chatID int, username string) error {
+	err := p.storage.UnSubscrFormAucs(context.Background(), chatID, username)
+	if err != nil {
+		err = e.Wrap("can't unsubscribe from auc", err)
+		return err
+	}
+	return p.tg.SendMessage(chatID, msgUnSubscrAuc)
 }
