@@ -48,7 +48,8 @@ func (s *Storage) IsExists(ctx context.Context, auc *storage.Auction) (bool, err
 }
 
 func (s *Storage) Init(ctx context.Context) error {
-	q := `CREATE TABLE IF NOT EXISTS aucs (Name TEXT, URL TEXT, StartDate DATETIME, EndDate DATETIME, Status TEXT)`
+	q := `CREATE TABLE IF NOT EXISTS aucs (Name TEXT, URL TEXT, StartDate DATETIME, EndDate DATETIME, Status TEXT)
+			CREATE TABLE IF NOT EXISTS subscribes (ID TEXT, USERNAME TEXT);`
 	if _, err := s.db.ExecContext(ctx, q); err != nil {
 		err = e.Wrap("can't create table auc", err)
 		return err
@@ -100,6 +101,25 @@ func (s *Storage) GetFutureAucs(ctx context.Context, msg *string) (err error) {
 	}
 	*msg = strings.Join(aucs, `\n`)
 	return err
+}
+
+func (s *Storage) SubscrToAucs(ctx context.Context, chatID int, username string) error {
+	q := `INSERT into subscribes(ID, USERNAME)
+			SELECT ?, ?
+			from subscribes
+			WHERE NOT EXISTS(select 1 FROM subscribes WHERE ID = ?)`
+	if _, err := s.db.ExecContext(ctx, q, chatID, username, chatID); err != nil {
+		return e.Wrap("can't exec query to auc subscribing", err)
+	}
+	return nil
+}
+
+func (s *Storage) UnSubscrFormAucs(ctx context.Context, chatID int, username string) error {
+	q := `DELETE FROM subscribes WHERE ID = ?`
+	if _, err := s.db.ExecContext(ctx, q, chatID, username, chatID); err != nil {
+		return e.Wrap("can't exec query to delete subscribing", err)
+	}
+	return nil
 }
 
 func listOfURLParams(urls *storage.UrlsAlias) string {
