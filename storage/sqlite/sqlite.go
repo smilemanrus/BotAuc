@@ -48,8 +48,9 @@ func (s *Storage) IsExists(ctx context.Context, auc *storage.Auction) (bool, err
 }
 
 func (s *Storage) Init(ctx context.Context) error {
-	q := `CREATE TABLE IF NOT EXISTS aucs (Name TEXT, URL TEXT, StartDate DATETIME, EndDate DATETIME, Status TEXT)
-			CREATE TABLE IF NOT EXISTS subscribes (ID TEXT, USERNAME TEXT);`
+	q := `CREATE TABLE IF NOT EXISTS aucs (Name TEXT, URL TEXT, StartDate DATETIME, EndDate DATETIME, Status TEXT);
+			CREATE TABLE IF NOT EXISTS subscribes (ID INTEGER, USERNAME TEXT);
+			CREATE TABLE IF NOT EXISTS alerts (USERID INTEGER, NOTIFICATIONTYPE TEXT, URL TEXT, EVENTDATE DATETIME)`
 	if _, err := s.db.ExecContext(ctx, q); err != nil {
 		err = e.Wrap("can't create table auc", err)
 		return err
@@ -59,7 +60,7 @@ func (s *Storage) Init(ctx context.Context) error {
 
 func (s *Storage) ActualizeAucs(ctx context.Context, urls *storage.UrlsAlias) error {
 	q := `DELETE FROM aucs WHERE NOT URL IN (%s)`
-	q = fmt.Sprintf(q, listOfURLParams(urls))
+	q = fmt.Sprintf(q, listOfURLParams(urls, "?", ", "))
 
 	params := make([]interface{}, 0)
 	for _, url := range *urls {
@@ -72,7 +73,7 @@ func (s *Storage) ActualizeAucs(ctx context.Context, urls *storage.UrlsAlias) er
 	return nil
 }
 
-func (s *Storage) GetFutureAucs(ctx context.Context, msg *string) (err error) {
+func (s *Storage) GetFutureAucs(ctx context.Context) (msg string, err error) {
 	q := `select Name,
 				   URL,
 				   CAST(StartDate AS VARCHAR),
@@ -94,19 +95,18 @@ func (s *Storage) GetFutureAucs(ctx context.Context, msg *string) (err error) {
 		var endDate string
 		if err = row.Scan(&name, &url, &startDate, &endDate); err != nil {
 			err = e.Wrap("can't scan row", err)
-			return err
+			return "", err
 		}
 
 		aucs = append(aucs, fmt.Sprintf(`[%s](%s) с %s по %s`, name, url, startDate, endDate))
 	}
-	*msg = strings.Join(aucs, `\n`)
-	return err
+	msg = strings.Join(aucs, `\n`)
+	return msg, err
 }
 
 func (s *Storage) SubscrToAucs(ctx context.Context, chatID int, username string) error {
 	q := `INSERT into subscribes(ID, USERNAME)
 			SELECT ?, ?
-			from subscribes
 			WHERE NOT EXISTS(select 1 FROM subscribes WHERE ID = ?)`
 	if _, err := s.db.ExecContext(ctx, q, chatID, username, chatID); err != nil {
 		return e.Wrap("can't exec query to auc subscribing", err)
@@ -114,15 +114,73 @@ func (s *Storage) SubscrToAucs(ctx context.Context, chatID int, username string)
 	return nil
 }
 
-func (s *Storage) UnSubscrFormAucs(ctx context.Context, chatID int, username string) error {
+func (s *Storage) UnSubscrFormAucs(ctx context.Context, chatID int) error {
 	q := `DELETE FROM subscribes WHERE ID = ?`
-	if _, err := s.db.ExecContext(ctx, q, chatID, username, chatID); err != nil {
+	if _, err := s.db.ExecContext(ctx, q, chatID); err != nil {
 		return e.Wrap("can't exec query to delete subscribing", err)
 	}
 	return nil
 }
 
-func listOfURLParams(urls *storage.UrlsAlias) string {
-	res := strings.Repeat("?, ", len(*urls)-1) + "?"
+func (s *Storage) GetAucsBfrHour(ctx context.Context, eventType string) (storage.EventsData, error) {
+	q := `SELECT alerts.USERID,
+				   aucs.Name,
+				   aucs.URL,
+				   aucs.StartDate,
+				   aucs.EndDate
+			
+			FROM alerts
+					 INNER JOIN aucs
+								ON alerts.URL = aucs.URL
+									AND aucs.Status = ?
+									AND alerts.NOTIFICATIONTYPE = ?
+			ORDER BY alerts.USERID, aucs.StartDate`
+	qMakeAlert := strings.ReplaceAll(makeAlertQuery, "'%aucStatus%'", "?")
+	qMakeAlert = strings.ReplaceAll(qMakeAlert, "'%notificationType%'", "?")
+	aucStatus := "ready"
+	q = fmt.Sprintf("%s;\n%s", qMakeAlert, q)
+	row, err := s.db.QueryContext(ctx, q, "ready", aucStatus, eventType, aucStatus, eventType)
+	if err != nil {
+		return nil, e.Wrap("can't make request", err)
+	}
+	defer func() { _ = row.Close() }()
+
+	eventData := make(storage.EventsData, 0)
+	for row.Next() { // Iterate and fetch the records from result cursor
+		var userID int
+		var name string
+		var url string
+		var startDate string
+		var endDate string
+		if err = row.Scan(&userID, &name, &url, &startDate, &endDate); err != nil {
+			return nil, e.Wrap("can't scan row", err)
+		}
+		eventDataMessages := eventData[userID].Messages //проверить наполняемость таблицы
+		eventDataMessages = append(eventDataMessages, fmt.Sprintf(`[%s](%s) с %s по %s`, name, url, startDate, endDate))
+	}
+	return eventData, nil
+}
+
+func (s *Storage) FixSendingAlert(ctx context.Context, eventsData storage.EventsData, notyType string) error {
+	//queryBase := makingTempTableForFix
+	//insertQuery := `INSERT INTO DataForFix (USERID, NOTIFICATIONTYPE, URL)
+	//				%insertTables%`
+	//littleInsTable := `SELECT
+	//						?,--USERID
+	//						?,--NOTIFICATIONTYPE
+	//						?--URL`
+	params := make([]interface{}, 0) //Заполнить параметрами
+	for _, eventData := range eventsData {
+		for _, msg := range eventData.Messages {
+			params = append(params, msg)
+		}
+	}
+
+	return nil
+}
+
+func listOfURLParams(urls *storage.UrlsAlias, insString, separator string) string {
+	pattern := fmt.Sprintf("%s%s", insString, separator)
+	res := strings.Repeat(pattern, len(*urls)-1) + insString
 	return res
 }

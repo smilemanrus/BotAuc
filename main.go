@@ -29,8 +29,9 @@ func main() {
 		log.Fatalf("can't init db: %s", err)
 	}
 
-	//Бот
 	tgClient := telegramClient.New(tgHost, InitParams.Token)
+
+	//Бот
 	eventsProcessor := tgProcessor.New(tgClient, storage)
 
 	log.Print("service started")
@@ -47,7 +48,7 @@ func main() {
 	}
 
 	//Оповещения
-	notyProcessor := notification.New(storage)
+	notyProcessor := notification.New(storage, tgClient)
 	if err := notyProcessor.Process(notification.HourBeforeAuc); err != nil {
 		log.Fatal()
 	}

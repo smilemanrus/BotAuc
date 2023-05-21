@@ -29,14 +29,11 @@ func (c Consumer) Start() error {
 			log.Printf("[ERR] consumer: %s ", err.Error())
 			continue
 		}
-		if len(gotEvents) == 0 {
-			time.Sleep(c.pauseValue * time.Second)
-			continue
-		}
 		if err := c.HandleEvents(gotEvents); err != nil {
 			log.Print(err.Error())
 			continue
 		}
+		time.Sleep(c.pauseValue * time.Second)
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"log"
 	"path"
 	"strings"
+	"time"
 )
 
 const (
@@ -30,6 +31,7 @@ type Auction struct {
 }
 
 func NewAuc(name, startDate, endDate, url string) Auction {
+
 	return Auction{
 		Name:      strings.TrimSpace(name),
 		StartDate: strings.TrimSpace(startDate),
@@ -39,8 +41,8 @@ func NewAuc(name, startDate, endDate, url string) Auction {
 }
 
 type Meta struct {
-	StartDate string
-	EndDate   string
+	StartDate time.Time
+	EndDate   time.Time
 	URL       string
 	Status    string
 }
@@ -54,26 +56,38 @@ func New(storage storage.Storage) *Processor {
 func (p *Processor) Fetch(limit int) ([]events.Event, error) {
 	aucs := make([]events.Event, 0)
 	errLog := "can't parse auc, status %s"
-	err := aucDataByStatus(&aucs, aucReady)
-	err = e.WrapIfErr(fmt.Sprintf(errLog, aucReady), err)
-	err = aucDataByStatus(&aucs, aucActive)
-	err = e.WrapIfErr(fmt.Sprintf(errLog, aucActive), err)
+	if err := aucDataByStatus(&aucs, aucReady); err != nil {
+		return aucs, e.WrapIfErr(fmt.Sprintf(errLog, aucReady), err)
+	}
 
-	return aucs, err
+	if err := aucDataByStatus(&aucs, aucActive); err != nil {
+		return aucs, e.WrapIfErr(fmt.Sprintf(errLog, aucActive), err)
+	}
+	return aucs, nil
 }
 
-func aucToEvent(auc Auction, status string) events.Event {
+func aucToEvent(auc Auction, status string) (events.Event, error) {
 	res := events.Event{
 		Type: events.Auction,
 		Text: auc.Name,
 	}
+	layout := "02.01.2006 15:04"
+	frmtdStartDate, err := time.Parse(layout, strings.TrimSpace(auc.StartDate))
+	if err != nil {
+		return res, e.WrapIfErr("can't parse start date ", err)
+	}
+	frmtdEndDate, err := time.Parse(layout, strings.TrimSpace(auc.EndDate))
+	if err != nil {
+		return res, e.WrapIfErr("can't parse end date", err)
+	}
+
 	res.Meta = Meta{
-		StartDate: auc.StartDate,
-		EndDate:   auc.EndDate,
+		StartDate: frmtdStartDate,
+		EndDate:   frmtdEndDate,
 		URL:       auc.URL,
 		Status:    status,
 	}
-	return res
+	return res, err
 }
 
 func eventToAuc(event events.Event) (storage.Auction, error) {
@@ -90,6 +104,7 @@ func eventToAuc(event events.Event) (storage.Auction, error) {
 	}
 	return auc, nil
 }
+
 func (p *Processor) Process(events []events.Event) error {
 	var err error
 	var actURL string
@@ -133,9 +148,11 @@ func meta(event events.Event) (Meta, error) {
 	return res, nil
 }
 
-func aucDataByStatus(aucs *[]events.Event, status string) error {
+func aucDataByStatus(events *[]events.Event, status string) error {
 
 	c := colly.NewCollector()
+	aucs := make([]Auction, 0)
+
 	c.OnHTML("div.panel.panel-default.table-responsive tbody>tr ", func(e *colly.HTMLElement) {
 
 		href, _ := e.DOM.Find("td:nth-child(1)>a").Attr("href")
@@ -146,13 +163,22 @@ func aucDataByStatus(aucs *[]events.Event, status string) error {
 			e.DOM.Find("td:nth-child(3)").Text(),
 			e.DOM.Find("td:nth-child(4)").Text(),
 			fmt.Sprintf("%s%s", "https://", href))
-		aucEvent := aucToEvent(auc, status)
-		*aucs = append(*aucs, aucEvent)
+		aucs = append(aucs, auc)
 	})
 
 	url := path.Join(domain, "auction", status)
-	err := c.Visit(fmt.Sprintf("%s%s", "https://", url))
-	return err
+	if err := c.Visit(fmt.Sprintf("%s%s", "https://", url)); err != nil {
+		return e.Wrap("can't parse site", err)
+	}
+
+	for _, auc := range aucs {
+		aucEvent, err := aucToEvent(auc, status)
+		if err != nil {
+			return e.Wrap("can't convert auc to event", err)
+		}
+		*events = append(*events, aucEvent)
+	}
+	return nil
 }
 
 func (p *Processor) actualizeAucs(actualURLS *storage.UrlsAlias) error {

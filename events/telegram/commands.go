@@ -48,8 +48,7 @@ func (p *Processor) sendStart(chatID int) error {
 }
 
 func (p *Processor) sendAucData(chatID int) error {
-	msg := ""
-	err := p.storage.GetFutureAucs(context.Background(), &msg)
+	msg, err := p.storage.GetFutureAucs(context.Background())
 	if err != nil {
 		err = e.Wrap("can't get auc info", err)
 		return err
@@ -67,7 +66,7 @@ func (p *Processor) subscrToAucs(chatID int, username string) error {
 }
 
 func (p *Processor) unSubscrFormAucs(chatID int, username string) error {
-	err := p.storage.UnSubscrFormAucs(context.Background(), chatID, username)
+	err := p.storage.UnSubscrFormAucs(context.Background(), chatID)
 	if err != nil {
 		err = e.Wrap("can't unsubscribe from auc", err)
 		return err
