@@ -13,12 +13,12 @@ type Auction struct {
 	Status    string
 }
 
-type eventData struct {
-	Messages []string
-	url      string
+type EventData struct {
+	Message string
+	URL     string
 }
 
-type EventsData map[int]eventData
+type EventsData map[int][]EventData
 
 type UrlsAlias []string
 
@@ -31,4 +31,11 @@ type Storage interface {
 	UnSubscrFormAucs(ctx context.Context, chatID int) error
 	GetAucsBfrHour(ctx context.Context, eventType string) (EventsData, error)
 	FixSendingAlert(ctx context.Context, urls EventsData, notyType string) error
+}
+
+func NewEventData(messages, url string) EventData {
+	return EventData{
+		Message: messages,
+		URL:     url,
+	}
 }

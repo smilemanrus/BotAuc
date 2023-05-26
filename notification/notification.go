@@ -36,8 +36,12 @@ func (p *Processor) alertAboutAucBfrHour(notyType string) error {
 	if err != nil {
 		return e.Wrap("can't get aucs before hour", err)
 	}
-	for chatID, eventData := range ftrAucs {
-		aucsMsg := strings.Join(eventData.Messages, "\n")
+	for chatID, eventsData := range ftrAucs {
+		msgs := make([]string, len(eventsData))
+		for _, eventData := range eventsData {
+			msgs = append(msgs, eventData.Message)
+		}
+		aucsMsg := strings.Join(msgs, "\n")
 		if err = p.messenger.SendMessage(chatID, aucsMsg); err != nil {
 			return e.Wrap("can't send aucs before hour", err)
 		}

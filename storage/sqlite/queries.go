@@ -14,7 +14,7 @@ const makeAlertQuery = `BEGIN TRANSACTION;
 				FROM aucs
 				LEFT JOIN alerts on aucs.URL = alerts.URL
 				AND alerts.EVENTDATE IS NULL
-				WHERE Status = '%aucStatus'
+				WHERE Status = '%aucStatus%'
 				AND ((UNIXEPOCH(StartDate) - UNIXEPOCH()) / 60 / 60) = 0
 				AND alerts.URL IS NULL
 				;
@@ -29,15 +29,12 @@ const makeAlertQuery = `BEGIN TRANSACTION;
 				DROP TABLE aucsWithoutEvent;
 				COMMIT TRANSACTION`
 
-const makingTempTableForFix = `BEGIN TRANSACTION;
-								CREATE TABLE IF NOT EXISTS DataForFix
-								(
-									USERID           INTEGER,
-									NOTIFICATIONTYPE TEXT,
-									URL              TEXT
-								);
+const trunsctnQuery = `BEGIN TRANSACTION;
 								%logic%
 								;
-								
-								DROP TABLE DataForFix;
 								COMMIT TRANSACTION`
+
+const mkngDataForFix = `INSERT INTO DataForFix (USERID, NOTIFICATIONTYPE, URL, EVENTDATE)
+						%insertTables%
+						%logic%
+						DROP TABLE DataForFix`

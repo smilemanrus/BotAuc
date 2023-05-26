@@ -2,9 +2,6 @@ package main
 
 import (
 	telegramClient "BotAuc/clients/telegram"
-	eventConsumer "BotAuc/consumer/event-consumer"
-	"BotAuc/events/auctions"
-	tgProcessor "BotAuc/events/telegram"
 	"BotAuc/initiation"
 	"BotAuc/notification"
 	"BotAuc/storage/sqlite"
@@ -32,25 +29,25 @@ func main() {
 	tgClient := telegramClient.New(tgHost, InitParams.Token)
 
 	//Бот
-	eventsProcessor := tgProcessor.New(tgClient, storage)
-
-	log.Print("service started")
-	tgConsumer := eventConsumer.New(eventsProcessor, eventsProcessor, bachSize, 1)
-	if err := tgConsumer.Start(); err != nil {
-		log.Fatal()
-	}
-
-	//Парсер
-	aucProcessor := auctions.New(storage)
-	aucConsumer := eventConsumer.New(aucProcessor, aucProcessor, 0, 100)
-	if err := aucConsumer.Start(); err != nil {
-		log.Fatal()
-	}
+	//eventsProcessor := tgProcessor.New(tgClient, storage)
+	//
+	//log.Print("service started")
+	//tgConsumer := eventConsumer.New(eventsProcessor, eventsProcessor, bachSize, 1)
+	//if err := tgConsumer.Start(); err != nil {
+	//	log.Fatal()
+	//}
+	//
+	////Парсер
+	//aucProcessor := auctions.New(storage)
+	//aucConsumer := eventConsumer.New(aucProcessor, aucProcessor, 0, 100)
+	//if err := aucConsumer.Start(); err != nil {
+	//	log.Fatal()
+	//}
 
 	//Оповещения
 	notyProcessor := notification.New(storage, tgClient)
 	if err := notyProcessor.Process(notification.HourBeforeAuc); err != nil {
-		log.Fatal()
+		log.Fatalf("can't process notification: %s", err)
 	}
 
 }
